@@ -79,6 +79,17 @@ contract AuctionSplits is IAuctionHouse, ReentrancyGuard {
         minBidIncrementPercentage = 5; // 5%
     }
 
+
+    //----------------
+    // Splits Revenue
+    //----------------
+    function approveSplitsContract(Splitter _splitter) public returns (bool) {
+        // [Todo]:
+    }
+
+
+
+
     /**
      * @notice Create an auction.
      * @dev Store the auction details in the auctions mapping and emit an AuctionCreated event.
