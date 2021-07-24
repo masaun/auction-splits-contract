@@ -1,5 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-pragma solidity 0.8.4;
+
+//pragma solidity 0.8.4;
+pragma solidity 0.6.8;
 
 import {SplitStorage} from "./SplitStorage.sol";
 
@@ -16,7 +18,7 @@ interface ISplitFactory {
  * @author MirrorXYZ
  */
 contract SplitProxy is SplitStorage {
-    constructor() {
+    constructor() public {
         _splitter = ISplitFactory(msg.sender).splitter();
         wethAddress = ISplitFactory(msg.sender).wethAddress();
         merkleRoot = ISplitFactory(msg.sender).merkleRoot();

@@ -1,5 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-pragma solidity 0.8.4;
+
+//pragma solidity 0.8.4;
+pragma solidity 0.6.8;
 
 import {SplitProxy} from "./SplitProxy.sol";
 
@@ -20,7 +22,7 @@ contract SplitFactory {
 
     //======== Constructor =========
 
-    constructor(address splitter_, address wethAddress_) {
+    constructor(address splitter_, address wethAddress_) public {
         splitter = splitter_;
         wethAddress = wethAddress_;
     }
