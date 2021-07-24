@@ -57,6 +57,10 @@ contract AuctionSplits is IAuctionHouse, ReentrancyGuard {
 
     Counters.Counter private _auctionIdTracker;
 
+    //@dev - Split
+    mapping(address => address[]) splitRecipients;  // Splitter contract adddress -> 
+
+
     /**
      * @notice Require that the specified auction exists
      */
@@ -84,8 +88,9 @@ contract AuctionSplits is IAuctionHouse, ReentrancyGuard {
     // Splits Revenue
     //----------------
 
-    function registerSplitRecipients() public returns (bool) {
-        // [Todo]:        
+    function registerSplitRecipients(Splitter splitter) public returns (bool) {
+        // Add a new recepient to the split recipient list
+        splitRecipients[address(splitter)].push(msg.sender);
     }
 
     //@dev - It's OK to remove this methods
@@ -93,7 +98,7 @@ contract AuctionSplits is IAuctionHouse, ReentrancyGuard {
     //     splitFactory.createSplit(merkleRoot_);
     // }
 
-    function approveSplitsContract(Splitter _splitter) public returns (bool) {
+    function approveSplitsContract(Splitter splitter) public returns (bool) {
         // [Todo]:
     }
 
