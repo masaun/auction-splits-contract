@@ -57,6 +57,10 @@ contract AuctionSplits is IAuctionHouse, ReentrancyGuard {
 
     Counters.Counter private _auctionIdTracker;
 
+    //@dev - Split
+    mapping(address => address[]) splitRecipients;  // Splitter contract adddress -> 
+
+
     /**
      * @notice Require that the specified auction exists
      */
@@ -79,6 +83,34 @@ contract AuctionSplits is IAuctionHouse, ReentrancyGuard {
         minBidIncrementPercentage = 5; // 5%
     }
 
+
+    //----------------
+    // Splits Revenue
+    //----------------
+
+    //@dev - Add a new recepient to the split recipient list. (onlyOwner)
+    function registerSplitRecipients(Splitter splitter, address recipient) public returns (bool) {
+        splitRecipients[address(splitter)].push(recipient);
+    }
+
+    //@dev - It's OK to remove this methods
+    // function createSplit(bytes32 merkleRoot_) public returns (bool) {
+    //     splitFactory.createSplit(merkleRoot_);
+    // }
+
+    function approveSplitsContract(Splitter splitter) public returns (bool) {
+        // [Todo]:
+    }
+
+    // @notice - Once the split contract has sold an NFT on AuctionHouse, 
+    //           - the split particpants have the ability to receive their share.
+    //           - This could be implement by individual claiming functions
+    function sellNFTFor(Splitter _splitter) public returns (bool) {
+        // [Todo]:
+    }
+
+
+
     /**
      * @notice Create an auction.
      * @dev Store the auction details in the auctions mapping and emit an AuctionCreated event.
@@ -86,7 +118,7 @@ contract AuctionSplits is IAuctionHouse, ReentrancyGuard {
      */
     function createAuction(
         uint256 tokenId,
-        address tokenContract,
+        address tokenContract,  // The address of the NFT contract the token is from
         uint256 duration,
         uint256 reservePrice,
         address payable curator,
