@@ -57,6 +57,9 @@ contract AuctionSplits is IAuctionHouse, ReentrancyGuard {
 
     Counters.Counter private _auctionIdTracker;
 
+    //@notice - Mirror.xyz splits
+    SplitFactory public splitFactory;
+
     /**
      * @notice Require that the specified auction exists
      */
@@ -68,7 +71,7 @@ contract AuctionSplits is IAuctionHouse, ReentrancyGuard {
     /*
      * Constructor
      */
-    constructor(address _zora, address _weth) public {
+    constructor(address _zora, address _weth, SplitFactory _splitFactory) public {
         require(
             IERC165(_zora).supportsInterface(interfaceId),
             "Doesn't support NFT interface"
@@ -77,16 +80,28 @@ contract AuctionSplits is IAuctionHouse, ReentrancyGuard {
         wethAddress = _weth;
         timeBuffer = 15 * 60; // extend 15 minutes after every bid made in last 15 minutes
         minBidIncrementPercentage = 5; // 5%
+
+        splitFactory = _splitFactory;
     }
 
 
     //----------------
     // Splits Revenue
     //----------------
+    function createSplit(bytes32 merkleRoot_) public returns (bool) {
+        splitFactory.createSplit(merkleRoot_);
+    }
+
     function approveSplitsContract(Splitter _splitter) public returns (bool) {
         // [Todo]:
     }
 
+    // @notice - Once the split contract has sold an NFT on AuctionHouse, 
+    //           - the split particpants have the ability to receive their share.
+    //           - This could be implement by individual claiming functions
+    function sellNFTFor(Splitter _splitter) public returns (bool) {
+        // [Todo]:
+    }
 
 
 
