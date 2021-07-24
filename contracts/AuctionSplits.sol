@@ -3,6 +3,12 @@
 pragma solidity 0.6.8;
 pragma experimental ABIEncoderV2;
 
+//@notice - Mirror
+import { Splitter } from "./mirror/Splitter.sol";
+import { SplitProxy } from "./mirror/SplitProxy.sol";
+import { SplitFactory } from "./mirror/SplitFactory.sol";
+import { SplitStorage } from "./mirror/SplitStorage.sol";
+
 import { SafeMath } from "@openzeppelin/contracts/math/SafeMath.sol";
 import { IERC721, IERC165 } from "@openzeppelin/contracts/token/ERC721/IERC721.sol";
 import { ReentrancyGuard } from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
