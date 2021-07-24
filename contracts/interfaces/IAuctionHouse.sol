@@ -12,6 +12,10 @@ interface IAuctionHouse {
         uint256 tokenId;
         // Address for the ERC721 contract
         address tokenContract;
+
+        // Register spilits recipents
+        address[] splitRecipientsList;
+
         // Whether or not the auction curator has approved the auction to start
         bool approved;
         // The current highest bid amount

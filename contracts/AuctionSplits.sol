@@ -9,12 +9,13 @@ import { SplitProxy } from "./mirror/SplitProxy.sol";
 import { SplitFactory } from "./mirror/SplitFactory.sol";
 import { SplitStorage } from "./mirror/SplitStorage.sol";
 
+//@notice - Zora's Auction House
 import { SafeMath } from "@openzeppelin/contracts/math/SafeMath.sol";
 import { IERC721, IERC165 } from "@openzeppelin/contracts/token/ERC721/IERC721.sol";
 import { ReentrancyGuard } from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
-import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
-import {Counters} from "@openzeppelin/contracts/utils/Counters.sol";
+import { Counters } from "@openzeppelin/contracts/utils/Counters.sol";
 import { IMarket, Decimal } from "@zoralabs/core/dist/contracts/interfaces/IMarket.sol";
 import { IMedia } from "@zoralabs/core/dist/contracts/interfaces/IMedia.sol";
 import { IAuctionHouse } from "./interfaces/IAuctionHouse.sol";
@@ -47,7 +48,7 @@ contract AuctionSplits is IAuctionHouse, ReentrancyGuard {
     // The address of the zora protocol to use via this contract
     address public zora;
 
-    // / The address of the WETH contract, so that any ETH transferred can be handled as an ERC-20
+    // The address of the WETH contract, so that any ETH transferred can be handled as an ERC-20
     address public wethAddress;
 
     // A mapping of all of the auctions currently running.
@@ -58,7 +59,7 @@ contract AuctionSplits is IAuctionHouse, ReentrancyGuard {
     Counters.Counter private _auctionIdTracker;
 
     //@dev - Split
-    mapping(address => address[]) splitRecipients;  // Splitter contract adddress -> 
+    mapping(address => address[]) splitRecipients;  // NFT (tokenContract) address -> recipient address list 
 
 
     /**
@@ -89,8 +90,9 @@ contract AuctionSplits is IAuctionHouse, ReentrancyGuard {
     //----------------
 
     //@dev - Add a new recepient to the split recipient list. (onlyOwner)
-    function registerSplitRecipients(Splitter splitter, address recipient) public returns (bool) {
-        splitRecipients[address(splitter)].push(recipient);
+    function registerSplitRecipients(address tokenContract, address recipient) public returns (bool) {
+        //address tokenOwner = IERC721(tokenContract).ownerOf(tokenId);
+        splitRecipients[tokenContract].push(recipient);
     }
 
     //@dev - It's OK to remove this methods
@@ -137,6 +139,7 @@ contract AuctionSplits is IAuctionHouse, ReentrancyGuard {
         auctions[auctionId] = Auction({
             tokenId: tokenId,
             tokenContract: tokenContract,
+            splitRecipientsList: splitRecipients[tokenContract], // Register spilits recipents
             approved: false,
             amount: 0,
             duration: duration,
@@ -149,6 +152,7 @@ contract AuctionSplits is IAuctionHouse, ReentrancyGuard {
             auctionCurrency: auctionCurrency
         });
 
+        /// Put a NFT on the Escrow (AuctionSplit) contract
         IERC721(tokenContract).transferFrom(tokenOwner, address(this), tokenId);
 
         _auctionIdTracker.increment();
