@@ -88,9 +88,9 @@ contract AuctionSplits is IAuctionHouse, ReentrancyGuard {
     // Splits Revenue
     //----------------
 
-    function registerSplitRecipients(Splitter splitter) public returns (bool) {
-        // Add a new recepient to the split recipient list
-        splitRecipients[address(splitter)].push(msg.sender);
+    //@dev - Add a new recepient to the split recipient list. (onlyOwner)
+    function registerSplitRecipients(Splitter splitter, address recipient) public returns (bool) {
+        splitRecipients[address(splitter)].push(recipient);
     }
 
     //@dev - It's OK to remove this methods
