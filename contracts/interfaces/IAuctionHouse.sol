@@ -14,7 +14,7 @@ interface IAuctionHouse {
         address tokenContract;
 
         // Register spilits recipents
-        address[] splitRecipientsList;
+        //address[] splitRecipientsList;
 
         // Whether or not the auction curator has approved the auction to start
         bool approved;
