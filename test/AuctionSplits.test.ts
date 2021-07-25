@@ -83,6 +83,11 @@ describe("SplitProxy via Factory", () => {
     let funder, fakeWETH, account1, account2, transactionHandler;
     let tree;
 
+    // Global contract instance for basic test
+    let auctionHouse
+    let splitter
+    let proxyFactory
+
     describe("when there is a 50-50 allocation", () => {
       beforeEach(async () => {
         [
@@ -107,11 +112,11 @@ describe("SplitProxy via Factory", () => {
         const rootHash = tree.getHexRoot();
 
         // @notice - Deploy Zora AutionHouse contract
-        const auctionHouse = await deployAuctionHouse();
+        auctionHouse = await deployAuctionHouse();
 
         // @notice - Deploy split contracts
-        const splitter = await deploySplitter(auctionHouse.address);  /// [Todo]: Deploy the AuctionHouse.sol in advance
-        const proxyFactory = await deployProxyFactory(splitter.address, fakeWETH.address);
+        splitter = await deploySplitter(auctionHouse.address);  /// [Todo]: Deploy the AuctionHouse.sol in advance
+        proxyFactory = await deployProxyFactory(splitter.address, fakeWETH.address);
 
         // @dev - Execute createSplit() method that is defined in the SplitFactory.sol
         const deployTx = await proxyFactory.connect(funder).createSplit(rootHash);
@@ -147,8 +152,71 @@ describe("SplitProxy via Factory", () => {
         it("createAuction", async () => {
         
         });
-      });
 
+        // let auctionHouse: AuctionHouse;
+        // beforeEach(async () => {
+        //   auctionHouse = await deploy();
+        //   await mint(media);
+        //   await approveAuction(media, auctionHouse);
+        // });
+
+        it("should create an auction", async () => {
+          const owner = await media.ownerOf(0);
+          const [_, expectedCurator] = await ethers.getSigners();
+          await splitter.createAuction(auctionHouse, await expectedCurator.getAddress());
+
+          const createdAuction = await auctionHouse.auctions(0);
+
+          expect(createdAuction.duration).to.eq(24 * 60 * 60);
+          expect(createdAuction.reservePrice).to.eq(
+            BigNumber.from(10).pow(18).div(2)
+          );
+          expect(createdAuction.curatorFeePercentage).to.eq(5);
+          expect(createdAuction.tokenOwner).to.eq(owner);
+          expect(createdAuction.curator).to.eq(expectedCurator.address);
+          expect(createdAuction.approved).to.eq(false);
+        });
+
+        it("should be automatically approved if the creator is the curator", async () => {
+          const owner = await media.ownerOf(0);
+          await splitter.createAuction(auctionHouse, owner);
+
+          const createdAuction = await auctionHouse.auctions(0);
+
+          expect(createdAuction.approved).to.eq(true);
+        });
+
+        it("should be automatically approved if the creator is the Zero Address", async () => {
+          await splitter.createAuction(auctionHouse, ethers.constants.AddressZero);
+
+          const createdAuction = await auctionHouse.auctions(0);
+
+          expect(createdAuction.approved).to.eq(true);
+        });
+
+        it("should emit an AuctionCreated event", async () => {
+          const owner = await media.ownerOf(0);
+          const [_, expectedCurator] = await ethers.getSigners();
+
+          const block = await ethers.provider.getBlockNumber();
+          await splitter.createAuction(auctionHouse, await expectedCurator.getAddress());
+          const currAuction = await auctionHouse.auctions(0);
+          const events = await auctionHouse.queryFilter(
+            auctionHouse.filters.AuctionCreated(
+              null,
+              null,
+              null,
+              null,
+              null,
+              null,
+              null,
+              null,
+              null
+            ),
+            block
+          );
+        });
+      });
 
       describe("#setAuctionApproval", () => {});
 
