@@ -98,68 +98,15 @@ describe("SplitProxy via Factory", () => {
     //let proxyFactory
 
     describe("when there is a 50-50 allocation", () => {
-      beforeEach(async () => {
-        [
-          funder,
-          fakeWETH,
-          account1,
-          account2,
-          transactionHandler,
-        ] = await ethers.getSigners();
-
-        const claimers = [account1, account2];  // [Note]: In case that allocation is 50%, 50%
-
-        const allocationPercentages = [50000000, 50000000];
-        const allocations = allocationPercentages.map((percentage, index) => {
-          return {
-            account: claimers[index].address,
-            allocation: BigNumber.from(percentage),
-          };
-        });
-
-        tree = new AllocationTree(allocations);
-        const rootHash = tree.getHexRoot();
-
-        // @notice - Deploy Zora AutionHouse contract
-        auctionHouse = await deployAuctionHouse();
-
-        // @notice - Deploy split contracts
-        splitter = await deploySplitter(auctionHouse.address);  /// [Todo]: Deploy the AuctionHouse.sol in advance
-        proxyFactory = await deployProxyFactory(splitter.address, fakeWETH.address);
-
-        // @dev - Execute createSplit() method that is defined in the SplitFactory.sol
-        const deployTx = await proxyFactory.connect(funder).createSplit(rootHash);
-
-        // Compute address.
-        const constructorArgs = ethers.utils.defaultAbiCoder.encode(
-          ["bytes32"],
-          [rootHash]
-        );
-        const salt = ethers.utils.keccak256(constructorArgs);
-        const proxyBytecode = (await ethers.getContractFactory("SplitProxy"))
-          .bytecode;
-        const codeHash = ethers.utils.keccak256(proxyBytecode);
-        const proxyAddress = await ethers.utils.getCreate2Address(
-          proxyFactory.address,
-          salt,
-          codeHash
-        );
-        proxy = await (
-          await ethers.getContractAt("SplitProxy", proxyAddress)
-        ).deployed();
-
-        callableProxy = await (
-          await ethers.getContractAt("Splitter", proxy.address)
-        ).deployed();
-      });
 
       ///--------------------------------
       /// Zora's Auction House-related method
       ///--------------------------------
-      /// [Todo]: Add logic to below
+
       // let market: Market;
       // let media: Media;
       // let weth: WETH;
+
       let auction: AuctionHouse;
       let otherNft: TestERC721;
       let deployer, creator, owner, curator, bidderA, bidderB, otherUser: Signer;
@@ -207,7 +154,7 @@ describe("SplitProxy via Factory", () => {
         market = contracts.market;
         media = contracts.media;
         weth = await deployWETH();
-        auction = auctionHouse;
+        //auction = auctionHouse;
         auction = await deploy();
         otherNft = nfts.test;
         await mint(media.connect(creator));
@@ -278,24 +225,81 @@ describe("SplitProxy via Factory", () => {
         });
       });
 
-      describe("#createAuction", () => {});
+      // describe("#createAuction", () => {});
 
-      describe("#setAuctionApproval", () => {});
+      // describe("#setAuctionApproval", () => {});
 
-      describe("#setAuctionApproval", () => {});
+      // describe("#setAuctionApproval", () => {});
 
-      describe("#setAuctionReservePrice", () => {});
+      // describe("#setAuctionReservePrice", () => {});
 
-      describe("#createBid", () => {});
+      // describe("#createBid", () => {});
 
-      describe("#cancelAuction", () => {});
+      // describe("#cancelAuction", () => {});
 
-      describe("#endAuction", () => {});
+      // describe("#endAuction", () => {});
 
 
       ///--------------------------------
       /// Split-related method
       ///--------------------------------
+
+      beforeEach(async () => {
+        [
+          funder,
+          fakeWETH,
+          account1,
+          account2,
+          transactionHandler,
+        ] = await ethers.getSigners();
+
+        const claimers = [account1, account2];  // [Note]: In case that allocation is 50%, 50%
+
+        const allocationPercentages = [50000000, 50000000];
+        const allocations = allocationPercentages.map((percentage, index) => {
+          return {
+            account: claimers[index].address,
+            allocation: BigNumber.from(percentage),
+          };
+        });
+
+        tree = new AllocationTree(allocations);
+        const rootHash = tree.getHexRoot();
+
+        // @notice - Deploy Zora AutionHouse contract
+        auctionHouse = auction;
+        //auctionHouse = await deployAuctionHouse();
+
+        // @notice - Deploy split contracts
+        splitter = await deploySplitter(auctionHouse.address);  /// [Todo]: Deploy the AuctionHouse.sol in advance
+        proxyFactory = await deployProxyFactory(splitter.address, fakeWETH.address);
+
+        // @dev - Execute createSplit() method that is defined in the SplitFactory.sol
+        const deployTx = await proxyFactory.connect(funder).createSplit(rootHash);
+
+        // Compute address.
+        const constructorArgs = ethers.utils.defaultAbiCoder.encode(
+          ["bytes32"],
+          [rootHash]
+        );
+        const salt = ethers.utils.keccak256(constructorArgs);
+        const proxyBytecode = (await ethers.getContractFactory("SplitProxy"))
+          .bytecode;
+        const codeHash = ethers.utils.keccak256(proxyBytecode);
+        const proxyAddress = await ethers.utils.getCreate2Address(
+          proxyFactory.address,
+          salt,
+          codeHash
+        );
+        proxy = await (
+          await ethers.getContractAt("SplitProxy", proxyAddress)
+        ).deployed();
+
+        callableProxy = await (
+          await ethers.getContractAt("Splitter", proxy.address)
+        ).deployed();
+      });
+
       describe("and 1 ETH is deposited and the window is incremented", () => {
         beforeEach(async () => {
           await funder.sendTransaction({
