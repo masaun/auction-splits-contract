@@ -61,7 +61,6 @@ contract AuctionSplits is Splitter {
         auctionHouse.endAuction(auctionId);
 
         // [Todo]: Add a payout method for paying out revenue by selling a NFT
-        
     }
 
     //@dev - Execute the cancelAuction method via this Split contract
