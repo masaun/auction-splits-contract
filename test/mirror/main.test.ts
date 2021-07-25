@@ -1,7 +1,8 @@
 import { expect } from "chai";
 import { BigNumber } from "ethers";
 import { ethers, waffle } from "hardhat";
-import AllocationTree from "../merkle-tree/balance-tree";
+import AllocationTree from "./merkle-tree/balance-tree";
+//import AllocationTree from "../merkle-tree/balance-tree";
 
 import scenarios from "./scenarios.json";
 
