@@ -337,7 +337,11 @@ describe("SplitProxy via Factory", () => {
       let account2;
       let account3;
       let account4;
-      // Setup
+
+      // Zora
+      let auctionHouse;
+
+      // Split
       let proxy;
       let splitter;
       let rootHash;
@@ -379,6 +383,9 @@ describe("SplitProxy via Factory", () => {
 
             tree = new AllocationTree(allocations);
             rootHash = tree.getHexRoot();
+
+            // @notice - Deploy Zora AutionHouse contract
+            auctionHouse = await deployAuctionHouse();
 
             //@dev - Deploy Split-related contracts
             splitter = await deploySplitter(auctionHouse.address);
