@@ -2,9 +2,29 @@
 /// This test is referrenced from main.test.ts (Mirror.xyz)
 ///---------------------------------------------------------------
 
+//@dev - Zora Auction House
+import { ethers } from "hardhat";
+import { Market, Media } from "@zoralabs/core/dist/typechain";
+import { AuctionHouse, BadBidder, TestERC721, BadERC721 } from "../typechain";
+import { formatUnits } from "ethers/lib/utils";
+import { BigNumber, Contract, Signer } from "ethers";
+import {
+  approveAuction,
+  deployBidder,
+  deployOtherNFTs,
+  deployWETH,
+  deployZoraProtocol,
+  mint,
+  ONE_ETH,
+  revert,
+  TWO_ETH,
+} from "./utils";
+
+//@dev - Mirror.xyz
 import { expect } from "chai";
-import { BigNumber } from "ethers";
-import { ethers, waffle } from "hardhat";
+//import { BigNumber } from "ethers";
+import { waffle } from "hardhat";
+//import { ethers, waffle } from "hardhat";
 import AllocationTree from "./mirror/merkle-tree/balance-tree";
 //import AllocationTree from "../merkle-tree/balance-tree";
 
@@ -13,22 +33,39 @@ import scenarios from "./mirror/scenarios.json";
 
 let proxyFactory;
 
-const deploySplitter = async () => {
-  const Splitter = await ethers.getContractFactory("AuctionSplits");  // [Note]: Using the AuctionSplits.sol instead of the Splitter.sol
-  //const Splitter = await ethers.getContractFactory("Splitter");
-  const splitter = await Splitter.deploy();
+let market: Market;
+let media: Media;
+let weth: Contract;
+let badERC721: BadERC721;
+let testERC721: TestERC721;
+
+let auctionHouse: AuctionHouse;
+
+const deployAuctionHouse = async () => {
+  await ethers.provider.send("hardhat_reset", []);
+  const contracts = await deployZoraProtocol();
+  const nfts = await deployOtherNFTs();
+  market = contracts.market;
+  media = contracts.media;
+  weth = await deployWETH();
+  badERC721 = nfts.bad;
+  testERC721 = nfts.test;
+
+  const AuctionHouse = await ethers.getContractFactory("AuctionHouse");
+  const auctionHouse = await AuctionHouse.deploy(media.address, weth.address);
+
+  return auctionHouse as AuctionHouse;
+}
+
+const deploySplitter = async (auctionHouse: string) => {
+  const Splitter = await ethers.getContractFactory("AuctionSplits");
+  const splitter = await Splitter.deploy(auctionHouse);
   return await splitter.deployed();
 };
 
-const deployProxyFactory = async (
-  splitterAddress: string,
-  fakeWETHAddress: string
-) => {
+const deployProxyFactory = async (splitterAddress: string, fakeWETHAddress: string) => {
   const SplitFactory = await ethers.getContractFactory("SplitFactory");
-  const proxyFactory = await SplitFactory.deploy(
-    splitterAddress,
-    fakeWETHAddress
-  );
+  const proxyFactory = await SplitFactory.deploy(splitterAddress, fakeWETHAddress);
   return await proxyFactory.deployed();
 };
 
@@ -41,7 +78,6 @@ describe("SplitProxy via Factory", () => {
   ///-----------------------------------------
   /// In case that allocation is 50%, 50%
   ///-----------------------------------------
-
   describe("basic test", () => {
     let proxy, callableProxy;
     let funder, fakeWETH, account1, account2, transactionHandler;
@@ -70,11 +106,12 @@ describe("SplitProxy via Factory", () => {
         tree = new AllocationTree(allocations);
         const rootHash = tree.getHexRoot();
 
-        const splitter = await deploySplitter();
-        const proxyFactory = await deployProxyFactory(
-          splitter.address,
-          fakeWETH.address
-        );
+        // @notice - Deploy Zora AutionHouse contract
+        const auctionHouse = await deployAuctionHouse();
+
+        // @notice - Deploy split contracts
+        const splitter = await deploySplitter(auctionHouse.address);  /// [Todo]: Deploy the AuctionHouse.sol in advance
+        const proxyFactory = await deployProxyFactory(splitter.address, fakeWETH.address);
 
         const deployTx = await proxyFactory
           .connect(funder)
@@ -300,7 +337,11 @@ describe("SplitProxy via Factory", () => {
       let account2;
       let account3;
       let account4;
-      // Setup
+
+      // Zora
+      let auctionHouse;
+
+      // Split
       let proxy;
       let splitter;
       let rootHash;
@@ -343,11 +384,12 @@ describe("SplitProxy via Factory", () => {
             tree = new AllocationTree(allocations);
             rootHash = tree.getHexRoot();
 
-            splitter = await deploySplitter();
-            proxyFactory = await deployProxyFactory(
-              splitter.address,
-              fakeWETH.address
-            );
+            // @notice - Deploy Zora AutionHouse contract
+            auctionHouse = await deployAuctionHouse();
+
+            //@dev - Deploy Split-related contracts
+            splitter = await deploySplitter(auctionHouse.address);
+            proxyFactory = await deployProxyFactory(splitter.address, fakeWETH.address);
 
             deployTx = await proxyFactory.connect(funder).createSplit(rootHash);
             // Compute address.

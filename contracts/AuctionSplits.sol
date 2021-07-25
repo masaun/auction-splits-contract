@@ -3,46 +3,18 @@
 //pragma solidity 0.8.4;
 pragma solidity 0.6.8;
 
-import { SplitStorage } from "./mirror/SplitStorage.sol";
+import { Splitter, IERC20, IWETH } from "./mirror/Splitter.sol";
 
 //@dev - Zora Auction House
 import { IAuctionHouse } from "./interfaces/IAuctionHouse.sol";
 
-interface IERC20 {
-    function balanceOf(address account) external view returns (uint256);
-
-    function transfer(address recipient, uint256 amount)
-        external
-        returns (bool);
-}
-
-interface IWETH {
-    function deposit() external payable;
-
-    function transfer(address to, uint256 value) external returns (bool);
-}
 
 /**
  * @notice - AuctionSplits.sol is referenced from the Splitter.sol (MirrorXYZ)
  *
  * Building on the work from the Uniswap team at https://github.com/Uniswap/merkle-distributor
  */
-contract AuctionSplits is SplitStorage {
-    uint256 public constant PERCENTAGE_SCALE = 10e5;
-
-    // The TransferETH event is emitted after each eth transfer in the split is attempted.
-    event TransferETH(
-        // The account to which the transfer was attempted.
-        address account,
-        // The amount for transfer that was attempted.
-        uint256 amount,
-        // Whether or not the transfer succeeded.
-        bool success
-    );
-
-    // Emits when a window is incremented.
-    event WindowIncremented(uint256 currentWindow, uint256 fundsAvailable);
-
+contract AuctionSplits is Splitter {
     // @dev - Zora Auction House
     IAuctionHouse public auctionHouse;
 
@@ -50,198 +22,244 @@ contract AuctionSplits is SplitStorage {
         auctionHouse = _auctionHouse;
     }
 
-    function claimForAllWindows(
-        address account,
-        uint256 percentageAllocation,
-        bytes32[] calldata merkleProof
-    ) external {
-        // Make sure that the user has this allocation granted.
-        require(
-            verifyProof(
-                merkleProof,
-                merkleRoot,
-                getNode(account, percentageAllocation)
-            ),
-            "Invalid proof"
-        );
 
-        uint256 amount = 0;
-        for (uint256 i = 0; i < currentWindow; i++) {
-            if (!isClaimed(i, account)) {
-                setClaimed(i, account);
-
-                amount += scaleAmountByPercentage(
-                    balanceForWindow[i],
-                    percentageAllocation
-                );
-            }
-        }
-
-        transferETHOrWETH(account, amount);
+    ///------------------------------------------------------------------
+    /// Zora's Auction House-related methods
+    ///------------------------------------------------------------------
+    //@dev - Execute the createAuction method via this Split contract
+    function createAuction(
+        uint256 tokenId,
+        address tokenContract,
+        uint256 duration,
+        uint256 reservePrice,
+        address payable curator,
+        uint8 curatorFeePercentages,
+        address auctionCurrency
+    ) public returns (uint256 _auctionId) {
+        auctionHouse.createAuction(tokenId, tokenContract, duration, reservePrice, curator, curatorFeePercentages, auctionCurrency);
     }
 
-    function getNode(address account, uint256 percentageAllocation)
-        private
-        pure
-        returns (bytes32)
-    {
-        return keccak256(abi.encodePacked(account, percentageAllocation));
+    //@dev - Execute the setAuctionApproval method via this Split contract
+    function setAuctionApproval(uint256 auctionId, bool approved) public returns (bool) {
+        auctionHouse.setAuctionApproval(auctionId, approved);
     }
 
-    function scaleAmountByPercentage(uint256 amount, uint256 scaledPercent)
-        public
-        pure
-        returns (uint256 scaledAmount)
-    {
-        /*
-            Example:
-                If there is 100 ETH in the account, and someone has 
-                an allocation of 2%, we call this with 100 as the amount, and 200
-                as the scaled percent.
-
-                To find out the amount we use, for example: (100 * 200) / (100 * 100)
-                which returns 2 -- i.e. 2% of the 100 ETH balance.
-         */
-        scaledAmount = (amount * scaledPercent) / (100 * PERCENTAGE_SCALE);
+    //@dev - Execute the setAuctionReservePrice method via this Split contract
+    function setAuctionReservePrice(uint256 auctionId, uint256 reservePrice) public returns (bool) {
+        auctionHouse.setAuctionReservePrice(auctionId, reservePrice);        
     }
 
-    function claim(
-        uint256 window,
-        address account,
-        uint256 scaledPercentageAllocation,
-        bytes32[] calldata merkleProof
-    ) external {
-        require(currentWindow > window, "cannot claim for a future window");
-        require(
-            !isClaimed(window, account),
-            "Account already claimed the given window"
-        );
-
-        setClaimed(window, account);
-
-        require(
-            verifyProof(
-                merkleProof,
-                merkleRoot,
-                getNode(account, scaledPercentageAllocation)
-            ),
-            "Invalid proof"
-        );
-
-        transferETHOrWETH(
-            account,
-            // The absolute amount that's claimable.
-            scaleAmountByPercentage(
-                balanceForWindow[window],
-                scaledPercentageAllocation
-            )
-        );
+    //@dev - Execute the createBid method via this Split contract
+    function createBid(uint256 auctionId, uint256 amount) public payable returns (bool) {
+        auctionHouse.createBid(auctionId, amount);        
     }
 
-    function incrementWindow() public {
-        uint256 fundsAvailable;
-
-        if (currentWindow == 0) {
-            fundsAvailable = address(this).balance;
-        } else {
-            // Current Balance, subtract previous balance to get the
-            // funds that were added for this window.
-            fundsAvailable = depositedInWindow;
-        }
-
-        depositedInWindow = 0;
-        require(fundsAvailable > 0, "No additional funds for window");
-        balanceForWindow.push(fundsAvailable);
-        currentWindow += 1;
-        emit WindowIncremented(currentWindow, fundsAvailable);
+    //@dev - Execute the endAuction method via this Split contract
+    function endAuction(uint256 auctionId) public returns (bool) {
+        auctionHouse.endAuction(auctionId);
     }
 
-    function isClaimed(uint256 window, address account)
-        public
-        view
-        returns (bool)
-    {
-        return claimed[getClaimHash(window, account)];
+    //@dev - Execute the cancelAuction method via this Split contract
+    function cancelAuction(uint256 auctionId) public returns (bool) {
+        auctionHouse.cancelAuction(auctionId);        
     }
 
-    //======== Private Functions ========
 
-    function setClaimed(uint256 window, address account) private {
-        claimed[getClaimHash(window, account)] = true;
-    }
+    ///------------------------------------------------------------------
+    /// Split-related methods
+    ///------------------------------------------------------------------
+    // function claimForAllWindows(
+    //     address account,
+    //     uint256 percentageAllocation,
+    //     bytes32[] calldata merkleProof
+    // ) external {
+    //     // Make sure that the user has this allocation granted.
+    //     require(
+    //         verifyProof(
+    //             merkleProof,
+    //             merkleRoot,
+    //             getNode(account, percentageAllocation)
+    //         ),
+    //         "Invalid proof"
+    //     );
 
-    function getClaimHash(uint256 window, address account)
-        private
-        pure
-        returns (bytes32)
-    {
-        return keccak256(abi.encodePacked(window, account));
-    }
+    //     uint256 amount = 0;
+    //     for (uint256 i = 0; i < currentWindow; i++) {
+    //         if (!isClaimed(i, account)) {
+    //             setClaimed(i, account);
 
-    function amountFromPercent(uint256 amount, uint32 percent)
-        private
-        pure
-        returns (uint256)
-    {
-        // Solidity 0.8.0 lets us do this without SafeMath.
-        return (amount * percent) / 100;
-    }
+    //             amount += scaleAmountByPercentage(
+    //                 balanceForWindow[i],
+    //                 percentageAllocation
+    //             );
+    //         }
+    //     }
 
-    // Will attempt to transfer ETH, but will transfer WETH instead if it fails.
-    function transferETHOrWETH(address to, uint256 value)
-        private
-        returns (bool didSucceed)
-    {
-        // Try to transfer ETH to the given recipient.
-        didSucceed = attemptETHTransfer(to, value);
-        if (!didSucceed) {
-            // If the transfer fails, wrap and send as WETH, so that
-            // the auction is not impeded and the recipient still
-            // can claim ETH via the WETH contract (similar to escrow).
-            IWETH(wethAddress).deposit{value: value}();
-            IWETH(wethAddress).transfer(to, value);
-            // At this point, the recipient can unwrap WETH.
-        }
+    //     transferETHOrWETH(account, amount);
+    // }
 
-        emit TransferETH(to, value, didSucceed);
-    }
+    // function getNode(address account, uint256 percentageAllocation)
+    //     private
+    //     pure
+    //     returns (bytes32)
+    // {
+    //     return keccak256(abi.encodePacked(account, percentageAllocation));
+    // }
 
-    function attemptETHTransfer(address to, uint256 value)
-        private
-        returns (bool)
-    {
-        // Here increase the gas limit a reasonable amount above the default, and try
-        // to send ETH to the recipient.
-        // NOTE: This might allow the recipient to attempt a limited reentrancy attack.
-        (bool success, ) = to.call{value: value, gas: 30000}("");
-        return success;
-    }
+    // function scaleAmountByPercentage(uint256 amount, uint256 scaledPercent)
+    //     public
+    //     pure
+    //     returns (uint256 scaledAmount)
+    // {
+    //     /*
+    //         Example:
+    //             If there is 100 ETH in the account, and someone has 
+    //             an allocation of 2%, we call this with 100 as the amount, and 200
+    //             as the scaled percent.
 
-    // From https://github.com/protofire/zeppelin-solidity/blob/master/contracts/MerkleProof.sol
-    function verifyProof(
-        bytes32[] memory proof,
-        bytes32 root,
-        bytes32 leaf
-    ) private pure returns (bool) {
-        bytes32 computedHash = leaf;
+    //             To find out the amount we use, for example: (100 * 200) / (100 * 100)
+    //             which returns 2 -- i.e. 2% of the 100 ETH balance.
+    //      */
+    //     scaledAmount = (amount * scaledPercent) / (100 * PERCENTAGE_SCALE);
+    // }
 
-        for (uint256 i = 0; i < proof.length; i++) {
-            bytes32 proofElement = proof[i];
+    // function claim(
+    //     uint256 window,
+    //     address account,
+    //     uint256 scaledPercentageAllocation,
+    //     bytes32[] calldata merkleProof
+    // ) external {
+    //     require(currentWindow > window, "cannot claim for a future window");
+    //     require(
+    //         !isClaimed(window, account),
+    //         "Account already claimed the given window"
+    //     );
 
-            if (computedHash <= proofElement) {
-                // Hash(current computed hash + current element of the proof)
-                computedHash = keccak256(
-                    abi.encodePacked(computedHash, proofElement)
-                );
-            } else {
-                // Hash(current element of the proof + current computed hash)
-                computedHash = keccak256(
-                    abi.encodePacked(proofElement, computedHash)
-                );
-            }
-        }
+    //     setClaimed(window, account);
 
-        // Check if the computed hash (root) is equal to the provided root
-        return computedHash == root;
-    }
+    //     require(
+    //         verifyProof(
+    //             merkleProof,
+    //             merkleRoot,
+    //             getNode(account, scaledPercentageAllocation)
+    //         ),
+    //         "Invalid proof"
+    //     );
+
+    //     transferETHOrWETH(
+    //         account,
+    //         // The absolute amount that's claimable.
+    //         scaleAmountByPercentage(
+    //             balanceForWindow[window],
+    //             scaledPercentageAllocation
+    //         )
+    //     );
+    // }
+
+    // function incrementWindow() public {
+    //     uint256 fundsAvailable;
+
+    //     if (currentWindow == 0) {
+    //         fundsAvailable = address(this).balance;
+    //     } else {
+    //         // Current Balance, subtract previous balance to get the
+    //         // funds that were added for this window.
+    //         fundsAvailable = depositedInWindow;
+    //     }
+
+    //     depositedInWindow = 0;
+    //     require(fundsAvailable > 0, "No additional funds for window");
+    //     balanceForWindow.push(fundsAvailable);
+    //     currentWindow += 1;
+    //     emit WindowIncremented(currentWindow, fundsAvailable);
+    // }
+
+    // function isClaimed(uint256 window, address account)
+    //     public
+    //     view
+    //     returns (bool)
+    // {
+    //     return claimed[getClaimHash(window, account)];
+    // }
+
+    // //======== Private Functions ========
+
+    // function setClaimed(uint256 window, address account) private {
+    //     claimed[getClaimHash(window, account)] = true;
+    // }
+
+    // function getClaimHash(uint256 window, address account)
+    //     private
+    //     pure
+    //     returns (bytes32)
+    // {
+    //     return keccak256(abi.encodePacked(window, account));
+    // }
+
+    // function amountFromPercent(uint256 amount, uint32 percent)
+    //     private
+    //     pure
+    //     returns (uint256)
+    // {
+    //     // Solidity 0.8.0 lets us do this without SafeMath.
+    //     return (amount * percent) / 100;
+    // }
+
+    // // Will attempt to transfer ETH, but will transfer WETH instead if it fails.
+    // function transferETHOrWETH(address to, uint256 value)
+    //     private
+    //     returns (bool didSucceed)
+    // {
+    //     // Try to transfer ETH to the given recipient.
+    //     didSucceed = attemptETHTransfer(to, value);
+    //     if (!didSucceed) {
+    //         // If the transfer fails, wrap and send as WETH, so that
+    //         // the auction is not impeded and the recipient still
+    //         // can claim ETH via the WETH contract (similar to escrow).
+    //         IWETH(wethAddress).deposit{value: value}();
+    //         IWETH(wethAddress).transfer(to, value);
+    //         // At this point, the recipient can unwrap WETH.
+    //     }
+
+    //     emit TransferETH(to, value, didSucceed);
+    // }
+
+    // function attemptETHTransfer(address to, uint256 value)
+    //     private
+    //     returns (bool)
+    // {
+    //     // Here increase the gas limit a reasonable amount above the default, and try
+    //     // to send ETH to the recipient.
+    //     // NOTE: This might allow the recipient to attempt a limited reentrancy attack.
+    //     (bool success, ) = to.call{value: value, gas: 30000}("");
+    //     return success;
+    // }
+
+    // // From https://github.com/protofire/zeppelin-solidity/blob/master/contracts/MerkleProof.sol
+    // function verifyProof(
+    //     bytes32[] memory proof,
+    //     bytes32 root,
+    //     bytes32 leaf
+    // ) private pure returns (bool) {
+    //     bytes32 computedHash = leaf;
+
+    //     for (uint256 i = 0; i < proof.length; i++) {
+    //         bytes32 proofElement = proof[i];
+
+    //         if (computedHash <= proofElement) {
+    //             // Hash(current computed hash + current element of the proof)
+    //             computedHash = keccak256(
+    //                 abi.encodePacked(computedHash, proofElement)
+    //             );
+    //         } else {
+    //             // Hash(current element of the proof + current computed hash)
+    //             computedHash = keccak256(
+    //                 abi.encodePacked(proofElement, computedHash)
+    //             );
+    //         }
+    //     }
+
+    //     // Check if the computed hash (root) is equal to the provided root
+    //     return computedHash == root;
+    // }
 }
