@@ -15,6 +15,7 @@
 
 ## Workflow
 - Diagram of workflow that show how each contracts are interacted.
+  (Note: In case of below, 4 recipents are specified by auction creator in advance)
  ![Diagram_AuctionSplitsContracts](https://user-images.githubusercontent.com/19357502/126908102-6f2d2957-5f8c-40fe-9e37-845f06c7e039.jpg)
 
 <br>
