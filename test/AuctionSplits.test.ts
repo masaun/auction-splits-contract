@@ -86,7 +86,7 @@ describe("SplitProxy via Factory", () => {
     // Global contract instance for basic test
     let auctionHouse
     let splitter
-    let proxyFactory
+    //let proxyFactory
 
     describe("when there is a 50-50 allocation", () => {
       beforeEach(async () => {
@@ -149,19 +149,15 @@ describe("SplitProxy via Factory", () => {
       ///--------------------------------
       /// [Todo]: Add logic to below
       describe("#createAuction", () => {
-        it("createAuction", async () => {
-        
+        beforeEach(async () => {
+          await mint(media);
+          await approveAuction(media, auctionHouse);
         });
-
-        // let auctionHouse: AuctionHouse;
-        // beforeEach(async () => {
-        //   auctionHouse = await deploy();
-        //   await mint(media);
-        //   await approveAuction(media, auctionHouse);
-        // });
 
         it("should create an auction", async () => {
           const owner = await media.ownerOf(0);
+          console.log('=== owner ===', owner)
+
           const [_, expectedCurator] = await ethers.getSigners();
           await splitter.createAuction(auctionHouse, await expectedCurator.getAddress());
 
