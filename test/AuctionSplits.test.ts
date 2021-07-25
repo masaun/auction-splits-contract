@@ -544,19 +544,19 @@ describe("SplitProxy via Factory", () => {
       /// Zora's Auction House-related method
       ///--------------------------------
       /// [Todo]: Add logic to below
-      describe("#createAuction", () => {});
+      // describe("#createAuction", () => {});
 
-      describe("#setAuctionApproval", () => {});
+      // describe("#setAuctionApproval", () => {});
 
-      describe("#setAuctionApproval", () => {});
+      // describe("#setAuctionApproval", () => {});
 
-      describe("#setAuctionReservePrice", () => {});
+      // describe("#setAuctionReservePrice", () => {});
 
-      describe("#createBid", () => {});
+      // describe("#createBid", () => {});
 
-      describe("#cancelAuction", () => {});
+      // describe("#cancelAuction", () => {});
 
-      describe("#endAuction", () => {});
+      // describe("#endAuction", () => {});
 
 
       ///--------------------------------
