@@ -113,9 +113,9 @@ describe("SplitProxy via Factory", () => {
         const splitter = await deploySplitter(auctionHouse.address);  /// [Todo]: Deploy the AuctionHouse.sol in advance
         const proxyFactory = await deployProxyFactory(splitter.address, fakeWETH.address);
 
-        const deployTx = await proxyFactory
-          .connect(funder)
-          .createSplit(rootHash);
+        // @dev - Execute createSplit() method that is defined in the SplitFactory.sol
+        const deployTx = await proxyFactory.connect(funder).createSplit(rootHash);
+
         // Compute address.
         const constructorArgs = ethers.utils.defaultAbiCoder.encode(
           ["bytes32"],
@@ -139,6 +139,28 @@ describe("SplitProxy via Factory", () => {
         ).deployed();
       });
 
+      ///--------------------------------
+      /// Zora's Auction House-related method
+      ///--------------------------------
+      /// [Todo]: Add logic to below
+      describe("#createAuction", () => {});
+
+      describe("#setAuctionApproval", () => {});
+
+      describe("#setAuctionApproval", () => {});
+
+      describe("#setAuctionReservePrice", () => {});
+
+      describe("#createBid", () => {});
+
+      describe("#cancelAuction", () => {});
+
+      describe("#endAuction", () => {});
+
+
+      ///--------------------------------
+      /// Split-related method
+      ///--------------------------------
       describe("and 1 ETH is deposited and the window is incremented", () => {
         beforeEach(async () => {
           await funder.sendTransaction({
@@ -369,6 +391,29 @@ describe("SplitProxy via Factory", () => {
         claimers = [account1, account2, account3, account4];  // [Note]: In case that allocation is 25%, 25%, 25%, 25%
       });
 
+
+      ///--------------------------------
+      /// Zora's Auction House-related method
+      ///--------------------------------
+      /// [Todo]: Add logic to below
+      describe("#createAuction", () => {});
+
+      describe("#setAuctionApproval", () => {});
+
+      describe("#setAuctionApproval", () => {});
+
+      describe("#setAuctionReservePrice", () => {});
+
+      describe("#createBid", () => {});
+
+      describe("#cancelAuction", () => {});
+
+      describe("#endAuction", () => {});
+
+
+      ///--------------------------------
+      /// Split-related method
+      ///--------------------------------
       describe("#createSplit", () => {
         describe(`when the allocation is ${scaledPercentages.join(
           "%, "
@@ -391,7 +436,9 @@ describe("SplitProxy via Factory", () => {
             splitter = await deploySplitter(auctionHouse.address);
             proxyFactory = await deployProxyFactory(splitter.address, fakeWETH.address);
 
+            // @dev - Execute createSplit() method that is defined in the SplitFactory.sol
             deployTx = await proxyFactory.connect(funder).createSplit(rootHash);
+
             // Compute address.
             const constructorArgs = ethers.utils.defaultAbiCoder.encode(
               ["bytes32"],

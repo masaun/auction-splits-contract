@@ -3,6 +3,7 @@
 //pragma solidity 0.8.4;
 pragma solidity 0.6.8;
 
+//@dev - Mirror.xyz
 import { Splitter, IERC20, IWETH } from "./mirror/Splitter.sol";
 
 //@dev - Zora Auction House
@@ -10,7 +11,7 @@ import { IAuctionHouse } from "./interfaces/IAuctionHouse.sol";
 
 
 /**
- * @notice - AuctionSplits.sol is referenced from the Splitter.sol (MirrorXYZ)
+ * @notice - AuctionSplits.sol is the smart contract that inherit the Splitter.sol (MirrorXYZ)
  *
  * Building on the work from the Uniswap team at https://github.com/Uniswap/merkle-distributor
  */
