@@ -1,3 +1,11 @@
+# Auction Splits Contract (for Zora)
+
+<br>
+
+<hr>
+
+(Below is reference of the Zora Auction House)
+
 # Zora — Auction House 〜 𓀨 〜
 
 ![Auction House Header Image](./auction-house.png)
