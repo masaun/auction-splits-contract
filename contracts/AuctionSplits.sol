@@ -3,25 +3,25 @@
 //pragma solidity 0.8.4;
 pragma solidity 0.6.8;
 
-import { Splitter } from "./mirror/Splitter.sol";
+import { Splitter, IERC20, IWETH } from "./mirror/Splitter.sol";
 //import { SplitStorage } from "./mirror/SplitStorage.sol";
 
 //@dev - Zora Auction House
 import { IAuctionHouse } from "./interfaces/IAuctionHouse.sol";
 
-interface IERC20 {
-    function balanceOf(address account) external view returns (uint256);
+// interface IERC20 {
+//     function balanceOf(address account) external view returns (uint256);
 
-    function transfer(address recipient, uint256 amount)
-        external
-        returns (bool);
-}
+//     function transfer(address recipient, uint256 amount)
+//         external
+//         returns (bool);
+// }
 
-interface IWETH {
-    function deposit() external payable;
+// interface IWETH {
+//     function deposit() external payable;
 
-    function transfer(address to, uint256 value) external returns (bool);
-}
+//     function transfer(address to, uint256 value) external returns (bool);
+// }
 
 /**
  * @notice - AuctionSplits.sol is referenced from the Splitter.sol (MirrorXYZ)
