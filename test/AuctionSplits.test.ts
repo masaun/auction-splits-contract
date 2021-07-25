@@ -143,7 +143,12 @@ describe("SplitProxy via Factory", () => {
       /// Zora's Auction House-related method
       ///--------------------------------
       /// [Todo]: Add logic to below
-      describe("#createAuction", () => {});
+      describe("#createAuction", () => {
+        it("createAuction", async () => {
+        
+        });
+      });
+
 
       describe("#setAuctionApproval", () => {});
 
