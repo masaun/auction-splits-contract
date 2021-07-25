@@ -3,6 +3,8 @@
 ///---------------------------------------------------------------
 
 //@dev - Zora Auction House
+import chai, { expect } from "chai";
+import asPromised from "chai-as-promised";
 import { ethers } from "hardhat";
 import { Market, Media } from "@zoralabs/core/dist/typechain";
 import { AuctionHouse, BadBidder, TestERC721, BadERC721 } from "../typechain";
@@ -18,10 +20,12 @@ import {
   ONE_ETH,
   revert,
   TWO_ETH,
+  TENTH_ETH,
+  THOUSANDTH_ETH
 } from "./utils";
 
 //@dev - Mirror.xyz
-import { expect } from "chai";
+//import { expect } from "chai";
 //import { BigNumber } from "ethers";
 import { waffle } from "hardhat";
 //import { ethers, waffle } from "hardhat";
@@ -40,6 +44,11 @@ let badERC721: BadERC721;
 let testERC721: TestERC721;
 
 let auctionHouse: AuctionHouse;
+
+const ONE_DAY = 24 * 60 * 60;
+
+// helper function so we can parse numbers and do approximate number calculations, to avoid annoying gas calculations
+const smallify = (bn: BigNumber) => bn.div(THOUSANDTH_ETH).toNumber();
 
 const deployAuctionHouse = async () => {
   await ethers.provider.send("hardhat_reset", []);
@@ -89,6 +98,152 @@ describe("SplitProxy via Factory", () => {
     //let proxyFactory
 
     describe("when there is a 50-50 allocation", () => {
+
+      ///--------------------------------
+      /// Zora's Auction House-related method
+      ///--------------------------------
+
+      // let market: Market;
+      // let media: Media;
+      // let weth: WETH;
+
+      let auction: AuctionHouse;
+      let otherNft: TestERC721;
+      let deployer, creator, owner, curator, bidderA, bidderB, otherUser: Signer;
+      let deployerAddress,
+        ownerAddress,
+        creatorAddress,
+        curatorAddress,
+        bidderAAddress,
+        bidderBAddress,
+        otherUserAddress: string;
+
+      async function deploy(): Promise<AuctionHouse> {
+        const AuctionHouse = await ethers.getContractFactory("AuctionHouse");
+        const auctionHouse = await AuctionHouse.deploy(media.address, weth.address);
+
+        return auctionHouse as AuctionHouse;
+      }
+
+      beforeEach(async () => {
+        await ethers.provider.send("hardhat_reset", []);
+        [
+          deployer,
+          creator,
+          owner,
+          curator,
+          bidderA,
+          bidderB,
+          otherUser,
+        ] = await ethers.getSigners();
+        [
+          deployerAddress,
+          creatorAddress,
+          ownerAddress,
+          curatorAddress,
+          bidderAAddress,
+          bidderBAddress,
+          otherUserAddress,
+        ] = await Promise.all(
+          [deployer, creator, owner, curator, bidderA, bidderB].map((s) =>
+            s.getAddress()
+          )
+        );
+        const contracts = await deployZoraProtocol();
+        const nfts = await deployOtherNFTs();
+        market = contracts.market;
+        media = contracts.media;
+        weth = await deployWETH();
+        //auction = auctionHouse;
+        auction = await deploy();
+        otherNft = nfts.test;
+        await mint(media.connect(creator));
+        await otherNft.mint(creator.address, 0);
+        await media.connect(creator).transferFrom(creatorAddress, ownerAddress, 0);
+        await otherNft
+          .connect(creator)
+          .transferFrom(creatorAddress, ownerAddress, 0);
+      });
+
+      describe("ETH Auction with no curator", async () => {
+        async function executeETHAuction() {
+          await media.connect(owner).approve(auction.address, 0);
+          await auction
+            .connect(owner)
+            .createAuction(
+              0,
+              media.address,
+              ONE_DAY,
+              TENTH_ETH,
+              ethers.constants.AddressZero,
+              0,
+              ethers.constants.AddressZero
+            );
+          await auction.connect(bidderA).createBid(0, ONE_ETH, { value: ONE_ETH });
+          await auction.connect(bidderB).createBid(0, TWO_ETH, { value: TWO_ETH });
+          await ethers.provider.send("evm_setNextBlockTimestamp", [
+            Date.now() + ONE_DAY,
+          ]);
+          await auction.connect(otherUser).endAuction(0);
+        }
+
+        it("should transfer the NFT to the winning bidder", async () => {
+          await executeETHAuction();
+          expect(await media.ownerOf(0)).to.eq(bidderBAddress);
+        });
+
+        it("should withdraw the winning bid amount from the winning bidder", async () => {
+          const beforeBalance = await ethers.provider.getBalance(bidderBAddress);
+          await executeETHAuction();
+          const afterBalance = await ethers.provider.getBalance(bidderBAddress);
+
+          expect(smallify(beforeBalance.sub(afterBalance))).to.be.approximately(
+            smallify(TWO_ETH),
+            smallify(TENTH_ETH)
+          );
+        });
+
+        it("should pay the auction creator", async () => {
+          const beforeBalance = await ethers.provider.getBalance(ownerAddress);
+          await executeETHAuction();
+          const afterBalance = await ethers.provider.getBalance(ownerAddress);
+
+          // 15% creator fee -> 2ETH * 85% = 1.7 ETH
+          expect(smallify(afterBalance)).to.be.approximately(
+            smallify(beforeBalance.add(TENTH_ETH.mul(17))),
+            smallify(TENTH_ETH)
+          );
+        });
+
+        it("should pay the token creator in WETH", async () => {
+          const beforeBalance = await weth.balanceOf(creatorAddress);
+          await executeETHAuction();
+          const afterBalance = await weth.balanceOf(creatorAddress);
+
+          // 15% creator fee -> 2 ETH * 15% = 0.3 WETH
+          expect(afterBalance).to.eq(beforeBalance.add(THOUSANDTH_ETH.mul(300)));
+        });
+      });
+
+      // describe("#createAuction", () => {});
+
+      // describe("#setAuctionApproval", () => {});
+
+      // describe("#setAuctionApproval", () => {});
+
+      // describe("#setAuctionReservePrice", () => {});
+
+      // describe("#createBid", () => {});
+
+      // describe("#cancelAuction", () => {});
+
+      // describe("#endAuction", () => {});
+
+
+      ///--------------------------------
+      /// Split-related method
+      ///--------------------------------
+
       beforeEach(async () => {
         [
           funder,
@@ -112,7 +267,8 @@ describe("SplitProxy via Factory", () => {
         const rootHash = tree.getHexRoot();
 
         // @notice - Deploy Zora AutionHouse contract
-        auctionHouse = await deployAuctionHouse();
+        auctionHouse = auction;
+        //auctionHouse = await deployAuctionHouse();
 
         // @notice - Deploy split contracts
         splitter = await deploySplitter(auctionHouse.address);  /// [Todo]: Deploy the AuctionHouse.sol in advance
@@ -144,92 +300,6 @@ describe("SplitProxy via Factory", () => {
         ).deployed();
       });
 
-      ///--------------------------------
-      /// Zora's Auction House-related method
-      ///--------------------------------
-      /// [Todo]: Add logic to below
-      describe("#createAuction", () => {
-        beforeEach(async () => {
-          await mint(media);
-          await approveAuction(media, auctionHouse);
-        });
-
-        it("should create an auction", async () => {
-          const owner = await media.ownerOf(0);
-          console.log('=== owner ===', owner)
-
-          const [_, expectedCurator] = await ethers.getSigners();
-          await splitter.createAuction(auctionHouse, await expectedCurator.getAddress());
-
-          const createdAuction = await auctionHouse.auctions(0);
-
-          expect(createdAuction.duration).to.eq(24 * 60 * 60);
-          expect(createdAuction.reservePrice).to.eq(
-            BigNumber.from(10).pow(18).div(2)
-          );
-          expect(createdAuction.curatorFeePercentage).to.eq(5);
-          expect(createdAuction.tokenOwner).to.eq(owner);
-          expect(createdAuction.curator).to.eq(expectedCurator.address);
-          expect(createdAuction.approved).to.eq(false);
-        });
-
-        it("should be automatically approved if the creator is the curator", async () => {
-          const owner = await media.ownerOf(0);
-          await splitter.createAuction(auctionHouse, owner);
-
-          const createdAuction = await auctionHouse.auctions(0);
-
-          expect(createdAuction.approved).to.eq(true);
-        });
-
-        it("should be automatically approved if the creator is the Zero Address", async () => {
-          await splitter.createAuction(auctionHouse, ethers.constants.AddressZero);
-
-          const createdAuction = await auctionHouse.auctions(0);
-
-          expect(createdAuction.approved).to.eq(true);
-        });
-
-        it("should emit an AuctionCreated event", async () => {
-          const owner = await media.ownerOf(0);
-          const [_, expectedCurator] = await ethers.getSigners();
-
-          const block = await ethers.provider.getBlockNumber();
-          await splitter.createAuction(auctionHouse, await expectedCurator.getAddress());
-          const currAuction = await auctionHouse.auctions(0);
-          const events = await auctionHouse.queryFilter(
-            auctionHouse.filters.AuctionCreated(
-              null,
-              null,
-              null,
-              null,
-              null,
-              null,
-              null,
-              null,
-              null
-            ),
-            block
-          );
-        });
-      });
-
-      describe("#setAuctionApproval", () => {});
-
-      describe("#setAuctionApproval", () => {});
-
-      describe("#setAuctionReservePrice", () => {});
-
-      describe("#createBid", () => {});
-
-      describe("#cancelAuction", () => {});
-
-      describe("#endAuction", () => {});
-
-
-      ///--------------------------------
-      /// Split-related method
-      ///--------------------------------
       describe("and 1 ETH is deposited and the window is incremented", () => {
         beforeEach(async () => {
           await funder.sendTransaction({
