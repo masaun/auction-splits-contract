@@ -4,24 +4,10 @@
 pragma solidity 0.6.8;
 
 import { Splitter, IERC20, IWETH } from "./mirror/Splitter.sol";
-//import { SplitStorage } from "./mirror/SplitStorage.sol";
 
 //@dev - Zora Auction House
 import { IAuctionHouse } from "./interfaces/IAuctionHouse.sol";
 
-// interface IERC20 {
-//     function balanceOf(address account) external view returns (uint256);
-
-//     function transfer(address recipient, uint256 amount)
-//         external
-//         returns (bool);
-// }
-
-// interface IWETH {
-//     function deposit() external payable;
-
-//     function transfer(address to, uint256 value) external returns (bool);
-// }
 
 /**
  * @notice - AuctionSplits.sol is referenced from the Splitter.sol (MirrorXYZ)
@@ -29,22 +15,6 @@ import { IAuctionHouse } from "./interfaces/IAuctionHouse.sol";
  * Building on the work from the Uniswap team at https://github.com/Uniswap/merkle-distributor
  */
 contract AuctionSplits is Splitter {
-//contract AuctionSplits is SplitStorage {
-    // uint256 public constant PERCENTAGE_SCALE = 10e5;
-
-    // // The TransferETH event is emitted after each eth transfer in the split is attempted.
-    // event TransferETH(
-    //     // The account to which the transfer was attempted.
-    //     address account,
-    //     // The amount for transfer that was attempted.
-    //     uint256 amount,
-    //     // Whether or not the transfer succeeded.
-    //     bool success
-    // );
-
-    // // Emits when a window is incremented.
-    // event WindowIncremented(uint256 currentWindow, uint256 fundsAvailable);
-
     // @dev - Zora Auction House
     IAuctionHouse public auctionHouse;
 
