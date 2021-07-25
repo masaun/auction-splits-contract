@@ -13,22 +13,16 @@ import scenarios from "./mirror/scenarios.json";
 
 let proxyFactory;
 
-const deploySplitter = async () => {
+const deploySplitter = async (auctionHouse: string) => {
   const Splitter = await ethers.getContractFactory("AuctionSplits");  // [Note]: Using the AuctionSplits.sol instead of the Splitter.sol
   //const Splitter = await ethers.getContractFactory("Splitter");
-  const splitter = await Splitter.deploy();
+  const splitter = await Splitter.deploy(auctionHouse);
   return await splitter.deployed();
 };
 
-const deployProxyFactory = async (
-  splitterAddress: string,
-  fakeWETHAddress: string
-) => {
+const deployProxyFactory = async (splitterAddress: string, fakeWETHAddress: string) => {
   const SplitFactory = await ethers.getContractFactory("SplitFactory");
-  const proxyFactory = await SplitFactory.deploy(
-    splitterAddress,
-    fakeWETHAddress
-  );
+  const proxyFactory = await SplitFactory.deploy(splitterAddress, fakeWETHAddress);
   return await proxyFactory.deployed();
 };
 
@@ -70,11 +64,9 @@ describe("SplitProxy via Factory", () => {
         tree = new AllocationTree(allocations);
         const rootHash = tree.getHexRoot();
 
-        const splitter = await deploySplitter();
-        const proxyFactory = await deployProxyFactory(
-          splitter.address,
-          fakeWETH.address
-        );
+        // @notice - Deploy each contracts
+        const splitter = await deploySplitter(auctionHouse.address);  /// [Todo]: Deploy the AuctionHouse.sol in advance
+        const proxyFactory = await deployProxyFactory(splitter.address, fakeWETH.address);
 
         const deployTx = await proxyFactory
           .connect(funder)

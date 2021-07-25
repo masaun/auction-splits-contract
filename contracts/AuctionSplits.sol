@@ -50,6 +50,48 @@ contract AuctionSplits is SplitStorage {
         auctionHouse = _auctionHouse;
     }
 
+
+    ///---------------------------------
+    /// Zora's Auction House-related methods
+    ///---------------------------------
+    function createAuction(
+        uint256 tokenId,
+        address tokenContract,
+        uint256 duration,
+        uint256 reservePrice,
+        address payable curator,
+        uint8 curatorFeePercentages,
+        address auctionCurrency
+    ) public returns (uint256 _auctionId) {
+        //@dev - Execute the createAuction method via this Split contract
+        auctionHouse.createAuction(tokenId, tokenContract, duration, reservePrice, curator, curatorFeePercentages, auctionCurrency);
+    }
+
+    function setAuctionApproval(uint256 auctionId, bool approved) public returns (bool) {
+        auctionHouse.setAuctionApproval(auctionId, approved);
+    }
+
+    function setAuctionReservePrice(uint256 auctionId, uint256 reservePrice) public returns (bool) {
+        /// [Todo]: TypeError: Invalid type for argument in function call. Invalid implicit conversion from uint256 to bool requested.
+        auctionHouse.setAuctionApproval(auctionId, reservePrice);        
+    }
+
+    function createBid(uint256 auctionId, uint256 amount) public payable returns (bool) {
+        auctionHouse.createBid(auctionId, amount);        
+    }
+
+    function endAuction(uint256 auctionId) public returns (bool) {
+        auctionHouse.endAuction(auctionId);
+    }
+
+    function cancelAuction(uint256 auctionId) public returns (bool) {
+        auctionHouse.cancelAuction(auctionId);        
+    }
+
+
+    ///---------------------------------
+    /// Split-related methods
+    ///---------------------------------
     function claimForAllWindows(
         address account,
         uint256 percentageAllocation,
