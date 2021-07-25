@@ -5,6 +5,9 @@ pragma solidity 0.6.8;
 
 import { SplitStorage } from "./mirror/SplitStorage.sol";
 
+//@dev - Zora Auction House
+import { IAuctionHouse } from "./interfaces/IAuctionHouse.sol";
+
 interface IERC20 {
     function balanceOf(address account) external view returns (uint256);
 
@@ -20,7 +23,7 @@ interface IWETH {
 }
 
 /**
- * @notice - AuctionSplits.sol is referenced from the Splitter.sol (@author - MirrorXYZ)
+ * @notice - AuctionSplits.sol is referenced from the Splitter.sol (MirrorXYZ)
  *
  * Building on the work from the Uniswap team at https://github.com/Uniswap/merkle-distributor
  */
@@ -39,6 +42,13 @@ contract AuctionSplits is SplitStorage {
 
     // Emits when a window is incremented.
     event WindowIncremented(uint256 currentWindow, uint256 fundsAvailable);
+
+    // @dev - Zora Auction House
+    IAuctionHouse public auctionHouse;
+
+    constructor (IAuctionHouse _auctionHouse) public {
+        auctionHouse = _auctionHouse;
+    }
 
     function claimForAllWindows(
         address account,

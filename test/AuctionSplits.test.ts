@@ -1,3 +1,7 @@
+///---------------------------------------------------------------
+/// This test is referrenced from main.test.ts (Mirror.xyz)
+///---------------------------------------------------------------
+
 import { expect } from "chai";
 import { BigNumber } from "ethers";
 import { ethers, waffle } from "hardhat";
