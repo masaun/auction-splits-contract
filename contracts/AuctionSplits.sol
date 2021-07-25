@@ -54,6 +54,8 @@ contract AuctionSplits is SplitStorage {
     ///---------------------------------
     /// Zora's Auction House-related methods
     ///---------------------------------
+
+    //@dev - Execute the createAuction method via this Split contract
     function createAuction(
         uint256 tokenId,
         address tokenContract,
@@ -63,27 +65,30 @@ contract AuctionSplits is SplitStorage {
         uint8 curatorFeePercentages,
         address auctionCurrency
     ) public returns (uint256 _auctionId) {
-        //@dev - Execute the createAuction method via this Split contract
         auctionHouse.createAuction(tokenId, tokenContract, duration, reservePrice, curator, curatorFeePercentages, auctionCurrency);
     }
 
+    //@dev - Execute the setAuctionApproval method via this Split contract
     function setAuctionApproval(uint256 auctionId, bool approved) public returns (bool) {
         auctionHouse.setAuctionApproval(auctionId, approved);
     }
 
+    //@dev - Execute the setAuctionReservePrice method via this Split contract
     function setAuctionReservePrice(uint256 auctionId, uint256 reservePrice) public returns (bool) {
-        /// [Todo]: TypeError: Invalid type for argument in function call. Invalid implicit conversion from uint256 to bool requested.
-        auctionHouse.setAuctionApproval(auctionId, reservePrice);        
+        auctionHouse.setAuctionReservePrice(auctionId, reservePrice);        
     }
 
+    //@dev - Execute the createBid method via this Split contract
     function createBid(uint256 auctionId, uint256 amount) public payable returns (bool) {
         auctionHouse.createBid(auctionId, amount);        
     }
 
+    //@dev - Execute the endAuction method via this Split contract
     function endAuction(uint256 auctionId) public returns (bool) {
         auctionHouse.endAuction(auctionId);
     }
 
+    //@dev - Execute the cancelAuction method via this Split contract
     function cancelAuction(uint256 auctionId) public returns (bool) {
         auctionHouse.cancelAuction(auctionId);        
     }
