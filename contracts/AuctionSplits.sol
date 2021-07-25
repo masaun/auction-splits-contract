@@ -20,11 +20,11 @@ interface IWETH {
 }
 
 /**
- * @notice - Reference from the Splitter.sol (@author - MirrorXYZ)
+ * @notice - AuctionSplits.sol is referenced from the Splitter.sol (@author - MirrorXYZ)
  *
  * Building on the work from the Uniswap team at https://github.com/Uniswap/merkle-distributor
  */
-contract Splitter is SplitStorage {
+contract AuctionSplits is SplitStorage {
     uint256 public constant PERCENTAGE_SCALE = 10e5;
 
     // The TransferETH event is emitted after each eth transfer in the split is attempted.

@@ -10,7 +10,8 @@ import scenarios from "./mirror/scenarios.json";
 let proxyFactory;
 
 const deploySplitter = async () => {
-  const Splitter = await ethers.getContractFactory("Splitter");
+  const Splitter = await ethers.getContractFactory("AuctionSplits");  // [Note]: Using the AuctionSplits.sol instead of the Splitter.sol
+  //const Splitter = await ethers.getContractFactory("Splitter");
   const splitter = await Splitter.deploy();
   return await splitter.deployed();
 };
