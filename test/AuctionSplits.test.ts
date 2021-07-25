@@ -25,7 +25,7 @@ import {
 } from "./utils";
 
 //@dev - Mirror.xyz
-import { expect } from "chai";
+//import { expect } from "chai";
 //import { BigNumber } from "ethers";
 import { waffle } from "hardhat";
 //import { ethers, waffle } from "hardhat";
@@ -207,6 +207,7 @@ describe("SplitProxy via Factory", () => {
         market = contracts.market;
         media = contracts.media;
         weth = await deployWETH();
+        auction = auctionHouse;
         auction = await deploy();
         otherNft = nfts.test;
         await mint(media.connect(creator));
@@ -218,7 +219,7 @@ describe("SplitProxy via Factory", () => {
       });
 
       describe("ETH Auction with no curator", async () => {
-        async function run() {
+        async function executeETHAuction() {
           await media.connect(owner).approve(auction.address, 0);
           await auction
             .connect(owner)
@@ -240,13 +241,13 @@ describe("SplitProxy via Factory", () => {
         }
 
         it("should transfer the NFT to the winning bidder", async () => {
-          await run();
+          await executeETHAuction();
           expect(await media.ownerOf(0)).to.eq(bidderBAddress);
         });
 
         it("should withdraw the winning bid amount from the winning bidder", async () => {
           const beforeBalance = await ethers.provider.getBalance(bidderBAddress);
-          await run();
+          await executeETHAuction();
           const afterBalance = await ethers.provider.getBalance(bidderBAddress);
 
           expect(smallify(beforeBalance.sub(afterBalance))).to.be.approximately(
@@ -255,20 +256,9 @@ describe("SplitProxy via Factory", () => {
           );
         });
 
-        it("should refund the losing bidder", async () => {
-          const beforeBalance = await ethers.provider.getBalance(bidderAAddress);
-          await run();
-          const afterBalance = await ethers.provider.getBalance(bidderAAddress);
-
-          expect(smallify(beforeBalance)).to.be.approximately(
-            smallify(afterBalance),
-            smallify(TENTH_ETH)
-          );
-        });
-
         it("should pay the auction creator", async () => {
           const beforeBalance = await ethers.provider.getBalance(ownerAddress);
-          await run();
+          await executeETHAuction();
           const afterBalance = await ethers.provider.getBalance(ownerAddress);
 
           // 15% creator fee -> 2ETH * 85% = 1.7 ETH
@@ -280,7 +270,7 @@ describe("SplitProxy via Factory", () => {
 
         it("should pay the token creator in WETH", async () => {
           const beforeBalance = await weth.balanceOf(creatorAddress);
-          await run();
+          await executeETHAuction();
           const afterBalance = await weth.balanceOf(creatorAddress);
 
           // 15% creator fee -> 2 ETH * 15% = 0.3 WETH
