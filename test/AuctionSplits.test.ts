@@ -58,8 +58,7 @@ const deployAuctionHouse = async () => {
 }
 
 const deploySplitter = async (auctionHouse: string) => {
-  const Splitter = await ethers.getContractFactory("AuctionSplits");  // [Note]: Using the AuctionSplits.sol instead of the Splitter.sol
-  //const Splitter = await ethers.getContractFactory("Splitter");
+  const Splitter = await ethers.getContractFactory("AuctionSplits");
   const splitter = await Splitter.deploy(auctionHouse);
   return await splitter.deployed();
 };
@@ -79,7 +78,6 @@ describe("SplitProxy via Factory", () => {
   ///-----------------------------------------
   /// In case that allocation is 50%, 50%
   ///-----------------------------------------
-
   describe("basic test", () => {
     let proxy, callableProxy;
     let funder, fakeWETH, account1, account2, transactionHandler;
