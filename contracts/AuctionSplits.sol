@@ -1,82 +1,237 @@
-// SPDX-License-Identifier: GPL-3.0
+// SPDX-License-Identifier: GPL-3.0-or-later
 
+//pragma solidity 0.8.4;
 pragma solidity 0.6.8;
-pragma experimental ABIEncoderV2;
 
-//@notice - Mirror
-import { Splitter } from "./mirror/Splitter.sol";
-import { SplitProxy } from "./mirror/SplitProxy.sol";
-import { SplitFactory } from "./mirror/SplitFactory.sol";
 import { SplitStorage } from "./mirror/SplitStorage.sol";
 
-//@notice - Zora's Auction House
-import { SafeMath } from "@openzeppelin/contracts/math/SafeMath.sol";
-import { IERC721, IERC165 } from "@openzeppelin/contracts/token/ERC721/IERC721.sol";
-import { ReentrancyGuard } from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
-import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
-import { Counters } from "@openzeppelin/contracts/utils/Counters.sol";
-import { IMarket, Decimal } from "@zoralabs/core/dist/contracts/interfaces/IMarket.sol";
-import { IMedia } from "@zoralabs/core/dist/contracts/interfaces/IMedia.sol";
-import { IAuctionHouse } from "./interfaces/IAuctionHouse.sol";
+interface IERC20 {
+    function balanceOf(address account) external view returns (uint256);
+
+    function transfer(address recipient, uint256 amount)
+        external
+        returns (bool);
+}
 
 interface IWETH {
     function deposit() external payable;
-    function withdraw(uint wad) external;
 
     function transfer(address to, uint256 value) external returns (bool);
 }
 
-interface IMediaExtended is IMedia {
-    function marketContract() external returns(address);
-}
-
 /**
- * @title An open auction house, enabling collectors and curators to run their own auctions
+ * @notice - Reference from the Splitter.sol (@author - MirrorXYZ)
+ *
+ * Building on the work from the Uniswap team at https://github.com/Uniswap/merkle-distributor
  */
-contract AuctionSplits {
+contract Splitter is SplitStorage {
+    uint256 public constant PERCENTAGE_SCALE = 10e5;
 
-    IAuctionHouse public auctionHouse;
+    // The TransferETH event is emitted after each eth transfer in the split is attempted.
+    event TransferETH(
+        // The account to which the transfer was attempted.
+        address account,
+        // The amount for transfer that was attempted.
+        uint256 amount,
+        // Whether or not the transfer succeeded.
+        bool success
+    );
 
-    // The address of the WETH contract, so that any ETH transferred can be handled as an ERC-20
-    address public wethAddress;
+    // Emits when a window is incremented.
+    event WindowIncremented(uint256 currentWindow, uint256 fundsAvailable);
 
-    //@dev - Split
-    mapping(address => address[]) splitRecipients;  // NFT (tokenContract) address -> recipient address list 
+    function claimForAllWindows(
+        address account,
+        uint256 percentageAllocation,
+        bytes32[] calldata merkleProof
+    ) external {
+        // Make sure that the user has this allocation granted.
+        require(
+            verifyProof(
+                merkleProof,
+                merkleRoot,
+                getNode(account, percentageAllocation)
+            ),
+            "Invalid proof"
+        );
 
-    /*
-     * Constructor
-     */
-    constructor(address _weth, IAuctionHouse _auctionHouse) public {
-        wethAddress = _weth;
-        auctionHouse = _auctionHouse;
+        uint256 amount = 0;
+        for (uint256 i = 0; i < currentWindow; i++) {
+            if (!isClaimed(i, account)) {
+                setClaimed(i, account);
+
+                amount += scaleAmountByPercentage(
+                    balanceForWindow[i],
+                    percentageAllocation
+                );
+            }
+        }
+
+        transferETHOrWETH(account, amount);
     }
 
-
-    //----------------
-    // Splits Revenue
-    //----------------
-
-    //@dev - Add a new recepient to the split recipient list. (onlyOwner)
-    function registerSplitRecipients(address tokenContract, address recipient) public returns (bool) {
-        //address tokenOwner = IERC721(tokenContract).ownerOf(tokenId);
-        splitRecipients[tokenContract].push(recipient);
+    function getNode(address account, uint256 percentageAllocation)
+        private
+        pure
+        returns (bytes32)
+    {
+        return keccak256(abi.encodePacked(account, percentageAllocation));
     }
 
-    function approveSplitsContract(Splitter splitter) public returns (bool) {
-        // [Todo]:
+    function scaleAmountByPercentage(uint256 amount, uint256 scaledPercent)
+        public
+        pure
+        returns (uint256 scaledAmount)
+    {
+        /*
+            Example:
+                If there is 100 ETH in the account, and someone has 
+                an allocation of 2%, we call this with 100 as the amount, and 200
+                as the scaled percent.
+
+                To find out the amount we use, for example: (100 * 200) / (100 * 100)
+                which returns 2 -- i.e. 2% of the 100 ETH balance.
+         */
+        scaledAmount = (amount * scaledPercent) / (100 * PERCENTAGE_SCALE);
     }
 
-    // @notice - Once the split contract has sold an NFT on AuctionHouse, 
-    //           - the split particpants have the ability to receive their share.
-    //           - This could be implement by individual claiming functions
-    function sellNFTFor(Splitter _splitter) public returns (bool) {
-        // [Todo]:
+    function claim(
+        uint256 window,
+        address account,
+        uint256 scaledPercentageAllocation,
+        bytes32[] calldata merkleProof
+    ) external {
+        require(currentWindow > window, "cannot claim for a future window");
+        require(
+            !isClaimed(window, account),
+            "Account already claimed the given window"
+        );
 
+        setClaimed(window, account);
+
+        require(
+            verifyProof(
+                merkleProof,
+                merkleRoot,
+                getNode(account, scaledPercentageAllocation)
+            ),
+            "Invalid proof"
+        );
+
+        transferETHOrWETH(
+            account,
+            // The absolute amount that's claimable.
+            scaleAmountByPercentage(
+                balanceForWindow[window],
+                scaledPercentageAllocation
+            )
+        );
     }
 
+    function incrementWindow() public {
+        uint256 fundsAvailable;
 
-    // TODO: consider reverting if the message sender is not WETH
-    receive() external payable {}
-    fallback() external payable {}
+        if (currentWindow == 0) {
+            fundsAvailable = address(this).balance;
+        } else {
+            // Current Balance, subtract previous balance to get the
+            // funds that were added for this window.
+            fundsAvailable = depositedInWindow;
+        }
+
+        depositedInWindow = 0;
+        require(fundsAvailable > 0, "No additional funds for window");
+        balanceForWindow.push(fundsAvailable);
+        currentWindow += 1;
+        emit WindowIncremented(currentWindow, fundsAvailable);
+    }
+
+    function isClaimed(uint256 window, address account)
+        public
+        view
+        returns (bool)
+    {
+        return claimed[getClaimHash(window, account)];
+    }
+
+    //======== Private Functions ========
+
+    function setClaimed(uint256 window, address account) private {
+        claimed[getClaimHash(window, account)] = true;
+    }
+
+    function getClaimHash(uint256 window, address account)
+        private
+        pure
+        returns (bytes32)
+    {
+        return keccak256(abi.encodePacked(window, account));
+    }
+
+    function amountFromPercent(uint256 amount, uint32 percent)
+        private
+        pure
+        returns (uint256)
+    {
+        // Solidity 0.8.0 lets us do this without SafeMath.
+        return (amount * percent) / 100;
+    }
+
+    // Will attempt to transfer ETH, but will transfer WETH instead if it fails.
+    function transferETHOrWETH(address to, uint256 value)
+        private
+        returns (bool didSucceed)
+    {
+        // Try to transfer ETH to the given recipient.
+        didSucceed = attemptETHTransfer(to, value);
+        if (!didSucceed) {
+            // If the transfer fails, wrap and send as WETH, so that
+            // the auction is not impeded and the recipient still
+            // can claim ETH via the WETH contract (similar to escrow).
+            IWETH(wethAddress).deposit{value: value}();
+            IWETH(wethAddress).transfer(to, value);
+            // At this point, the recipient can unwrap WETH.
+        }
+
+        emit TransferETH(to, value, didSucceed);
+    }
+
+    function attemptETHTransfer(address to, uint256 value)
+        private
+        returns (bool)
+    {
+        // Here increase the gas limit a reasonable amount above the default, and try
+        // to send ETH to the recipient.
+        // NOTE: This might allow the recipient to attempt a limited reentrancy attack.
+        (bool success, ) = to.call{value: value, gas: 30000}("");
+        return success;
+    }
+
+    // From https://github.com/protofire/zeppelin-solidity/blob/master/contracts/MerkleProof.sol
+    function verifyProof(
+        bytes32[] memory proof,
+        bytes32 root,
+        bytes32 leaf
+    ) private pure returns (bool) {
+        bytes32 computedHash = leaf;
+
+        for (uint256 i = 0; i < proof.length; i++) {
+            bytes32 proofElement = proof[i];
+
+            if (computedHash <= proofElement) {
+                // Hash(current computed hash + current element of the proof)
+                computedHash = keccak256(
+                    abi.encodePacked(computedHash, proofElement)
+                );
+            } else {
+                // Hash(current element of the proof + current computed hash)
+                computedHash = keccak256(
+                    abi.encodePacked(proofElement, computedHash)
+                );
+            }
+        }
+
+        // Check if the computed hash (root) is equal to the provided root
+        return computedHash == root;
+    }
 }
