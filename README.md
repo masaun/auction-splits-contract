@@ -3,13 +3,19 @@
 
 <br>
 
-## Specifications:
+## Specifications
 - This smart contract allow for a user to initiate a split contract that keeps track of a pool of ownership for a reasonable of addresses without being too gas intensive. 
 - This smart contract allow for the split contract to interact with Auction House to call functions. (such as createAuction, setAuctionReservePrice, and cancelAuction)
 - Once the split contract has sold an NFT on AuctionHouse, the split particpants have the ability to receive their share. This could be implement by individual claiming functions.
 - This smart contract allow for the splits contract to split both ETH and / or ERC20 tokens.
 - Each split only be used once, and for a specific auction.
    (Note: Those specifications are referenced from https://gitcoin.co/issue/ourzora/auction-house/5/100026146 )
+
+<br>
+
+## Workflow
+- Diagram of workflow that show how each contracts are interacted.
+![Diagram_AuctionSplitsContracts](https://user-images.githubusercontent.com/19357502/126907962-c01890e9-ddaa-4f48-8253-284756a51fdd.jpg)
 
 <br>
 
