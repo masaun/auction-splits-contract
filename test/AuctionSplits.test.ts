@@ -82,6 +82,8 @@ const PERCENTAGE_SCALE = 1000000;
 const NULL_BYTES =
   "0x0000000000000000000000000000000000000000000000000000000000000000";
 
+let PAYOUT_AMOUNT
+
 describe("SplitProxy via Factory", () => {
 
   ///-----------------------------------------
@@ -166,10 +168,13 @@ describe("SplitProxy via Factory", () => {
       });
 
       describe("ETH Auction with no curator", async () => {
+        /**
+         * @dev - This is the main method for the Zora Auction House
+         */ 
         async function executeETHAuction() {
           await media.connect(owner).approve(auction.address, 0);
           await auction
-            .connect(owner)
+            .connect(owner)  /// .connect() that specify fromAddress
             .createAuction(
               0,
               media.address,
@@ -222,6 +227,10 @@ describe("SplitProxy via Factory", () => {
 
           // 15% creator fee -> 2 ETH * 15% = 0.3 WETH
           expect(afterBalance).to.eq(beforeBalance.add(THOUSANDTH_ETH.mul(300)));
+
+          //@notice - This is payout amount
+          PAYOUT_AMOUNT = beforeBalance.add(THOUSANDTH_ETH.mul(300))
+          console.log('=== PAYOUT_AMOUNT ===', String(PAYOUT_AMOUNT))
         });
       });
 
