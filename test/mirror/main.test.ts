@@ -31,6 +31,11 @@ const NULL_BYTES =
   "0x0000000000000000000000000000000000000000000000000000000000000000";
 
 describe("SplitProxy via Factory", () => {
+
+  ///-----------------------------------------
+  /// In case that allocation is 50%, 50%
+  ///-----------------------------------------
+
   describe("basic test", () => {
     let proxy, callableProxy;
     let funder, fakeWETH, account1, account2, transactionHandler;
@@ -46,7 +51,7 @@ describe("SplitProxy via Factory", () => {
           transactionHandler,
         ] = await ethers.getSigners();
 
-        const claimers = [account1, account2];
+        const claimers = [account1, account2];  // [Note]: In case that allocation is 50%, 50%
 
         const allocationPercentages = [50000000, 50000000];
         const allocations = allocationPercentages.map((percentage, index) => {
@@ -261,6 +266,11 @@ describe("SplitProxy via Factory", () => {
     });
   });
 
+
+  ///-----------------------------------------
+  /// In case that allocation is 25%, 25%, 25%, 25%
+  ///-----------------------------------------
+
   describe("scenario tests", () => {
     for (
       let scenarioIndex = 0;
@@ -309,7 +319,7 @@ describe("SplitProxy via Factory", () => {
           account4,
         ] = await ethers.getSigners();
 
-        claimers = [account1, account2, account3, account4];
+        claimers = [account1, account2, account3, account4];  // [Note]: In case that allocation is 25%, 25%, 25%, 25%
       });
 
       describe("#createSplit", () => {
