@@ -1,5 +1,5 @@
 # Auction Splits Contract (for Zora)
-- This is the smart contract that a permissionless contract factory that would allow the owner of an NFT to permissionlessly initiate the splitting of revenue from a sale on the auction house with a reasonable # of addresses.
+- This is the smart contract that allow the owner of an NFT to permissionlessly initiate the splitting of revenue from a sale on the auction house with a reasonable of addresses.
 
 - Specifications:
   - This smart contract allow for a user to initiate a split contract that keeps track of a pool of ownership for a reasonable of addresses without being too gas intensive. 
